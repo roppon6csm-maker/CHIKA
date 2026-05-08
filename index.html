@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IDOL STRATEGIC ENGINE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap');
+        body { font-family: 'M PLUS Rounded 1c', sans-serif; background-color: #1e293b; color: #f8fafc; overflow: hidden; user-select: none; -webkit-touch-callout: none; }
+        .neon-text { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #ec4899; }
+        .neon-box { box-shadow: 0 0 8px rgba(56, 189, 248, 0.5), inset 0 0 8px rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; }
+        .slider-custom { -webkit-appearance: none; width: 100%; height: 8px; border-radius: 4px; background: #475569; outline: none; margin: 8px 0; }
+        .slider-custom::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 50%; background: #ec4899; cursor: pointer; box-shadow: 0 0 10px #ec4899; }
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="h-screen flex flex-col relative">
+
+    <div class="absolute top-1 right-2 text-[10px] font-bold text-slate-500 z-40">ver.1.0.8</div>
+
+    <header class="h-12 bg-[#0f172a] flex items-center justify-between px-3 border-b border-slate-700 shadow-md z-20 shrink-0">
+        <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-full bg-pink-500 flex items-center justify-center shadow-[0_0_8px_#ec4899]">
+                <span class="text-white font-bold text-sm">I</span>
+            </div>
+            <h1 class="text-sm font-extrabold tracking-wider neon-text">IDOL STRATEGIC ENGINE</h1>
+        </div>
+        <div class="text-xs font-bold text-sky-400 bg-slate-800 px-2 py-1 rounded border border-slate-600">
+            Month <span id="ui-month">1</span> (<span id="ui-time">02:00</span>)
+        </div>
+    </header>
+
+    <div class="bg-[#0f172a] border-b border-slate-700 p-2 z-20 shrink-0">
+        <div class="grid grid-cols-3 gap-2 mb-2">
+            <div class="bg-[#1e293b] p-1 rounded-lg neon-box flex flex-col justify-center items-center">
+                <div class="text-[9px] text-slate-400">営業利益(月)</div>
+                <div class="text-sm font-bold text-emerald-400" id="kpi-profit">¥0</div>
+            </div>
+            <div class="bg-[#1e293b] p-1 rounded-lg border border-slate-600 flex flex-col justify-center items-center">
+                <div class="text-[9px] text-slate-400">LTV/CAC</div>
+                <div class="text-sm font-bold text-white" id="kpi-ltvcac">0.0x</div>
+            </div>
+            <div class="bg-[#1e293b] p-1 rounded-lg border border-slate-600 flex flex-col justify-center items-center">
+                <div class="text-[9px] text-slate-400">バイラル(K)</div>
+                <div class="text-sm font-bold text-sky-400" id="kpi-viral">0.00</div>
+            </div>
+        </div>
+        
+        <div class="flex justify-between items-center px-1">
+            <div class="flex flex-col items-center bg-white text-black rounded px-1 py-1 w-[22%] shadow-sm">
+                <span class="text-[10px] font-bold" id="cnt-ninchi">0人/月</span>
+                <span class="text-xs font-extrabold">認知</span>
+            </div>
+            <span class="text-white text-xs font-bold">→</span>
+            <div class="flex flex-col items-center bg-white text-black rounded px-1 py-1 w-[22%] shadow-sm">
+                <span class="text-[10px] font-bold" id="cnt-kento">0人/月</span>
+                <span class="text-xs font-extrabold">検討</span>
+            </div>
+            <span class="text-white text-xs font-bold">→</span>
+            <div class="flex flex-col items-center bg-white text-black rounded px-1 py-1 w-[22%] shadow-sm">
+                <span class="text-[10px] font-bold" id="cnt-shinki">0人/月</span>
+                <span class="text-xs font-extrabold">新規</span>
+            </div>
+            <span class="text-white text-xs font-bold">→</span>
+            <div class="flex flex-col items-center bg-white text-black rounded px-1 py-1 w-[22%] shadow-sm">
+                <span class="text-[10px] font-bold" id="cnt-teichaku">0人/月</span>
+                <span class="text-xs font-extrabold">定着</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-1 relative bg-[#1e293b] overflow-hidden" id="canvas-container">
+        <canvas id="journeyCanvas" class="absolute inset-0 w-full h-full"></canvas>
+    </div>
+
+    <div id="modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-slate-800 p-6 rounded-2xl border-2 border-pink-500 w-11/12 max-w-md shadow-[0_0_30px_rgba(236,72,153,0.3)]">
+            <h2 class="text-xl font-extrabold text-white mb-1 flex items-center gap-2">
+                <svg class="w-6 h-6 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                方針決定 <span class="text-sm text-pink-400 font-normal">(Month <span id="modal-month">1</span>)</span>
+            </h2>
+            <p class="text-xs text-slate-400 mb-6">向こう1ヶ月（現実の2分間）の戦略パラメータを設定してください。</p>
+            
+            <div class="flex flex-col gap-5 pb-4">
+                <div>
+                    <div class="flex justify-between text-sm font-bold mb-1">
+                        <span class="text-slate-200">チェキ単価</span>
+                        <span id="val-cheki" class="text-pink-400">¥1,000</span>
+                    </div>
+                    <input type="range" id="lever-cheki" class="slider-custom" min="500" max="3000" step="500" value="1000">
+                </div>
+                <div>
+                    <div class="flex justify-between text-sm font-bold mb-1">
+                        <span class="text-slate-200">告知予算 (月)</span>
+                        <span id="val-budget" class="text-pink-400">¥50,000</span>
+                    </div>
+                    <input type="range" id="lever-budget" class="slider-custom" min="0" max="500000" step="10000" value="50000">
+                </div>
+                <div>
+                    <div class="flex justify-between text-sm font-bold mb-1">
+                        <span class="text-slate-200">特典会対応品質</span>
+                        <span id="val-greeting" class="text-pink-400">50</span>
+                    </div>
+                    <input type="range" id="lever-greeting" class="slider-custom" min="1" max="100" value="50">
+                </div>
+                <div>
+                    <div class="flex justify-between text-sm font-bold mb-1">
+                        <span class="text-slate-200">SNSエンゲージメント</span>
+                        <span id="val-sns" class="text-pink-400">50</span>
+                    </div>
+                    <input type="range" id="lever-sns" class="slider-custom" min="1" max="100" value="50">
+                </div>
+            </div>
+
+            <button id="btn-start" class="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-extrabold py-4 rounded-xl mt-2 shadow-lg active:scale-95 transition-transform">
+                シミュレーション開始 (1ヶ月)
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const $ = id => document.getElementById(id);
+
+        const STATE = { chekiPrice: 1000, marketingBudget: 50000, greetingQuality: 50, snsEngagement: 50, fixedCost: 500000, month: 1, timeLeft: 120, isRunning: false };
+        const COUNTS = { ninchi: 0, kento: 0, shinki: 0, teichaku: 0, royal: 0, heavy: 0, middle: 0, light: 0 };
+        let KPI = { profit: 0, ltvcac: 0, viral: 0 };
+
+        function formatCurrency(num) { return '¥' + Math.round(num).toLocaleString(); }
+
+        function updateKPI() {
+            const cac = STATE.marketingBudget / (COUNTS.shinki || 1);
+            const ltv = (2000 + STATE.chekiPrice * 2) * (1 + STATE.greetingQuality/20);
+            KPI.ltvcac = cac > 0 ? ltv / cac : 0;
+            KPI.profit = (COUNTS.shinki * ltv) - STATE.fixedCost - STATE.marketingBudget;
+            KPI.viral = (STATE.snsEngagement / 100) * 1.5;
+
+            $('kpi-profit').innerText = formatCurrency(KPI.profit);
+            $('kpi-profit').className = `text-sm font-bold ${KPI.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+            $('kpi-ltvcac').innerText = KPI.ltvcac.toFixed(2) + 'x';
+            $('kpi-viral').innerText = KPI.viral.toFixed(2);
+            $('cnt-ninchi').innerText = COUNTS.ninchi + '人/月';
+            $('cnt-kento').innerText = COUNTS.kento + '人/月';
+            $('cnt-shinki').innerText = COUNTS.shinki + '人/月';
+            $('cnt-teichaku').innerText = COUNTS.teichaku + '人/月';
+        }
+
+        const canvas = $('journeyCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+
+        const L = { c1: 0.13, c2: 0.37, c3: 0.61, c4: 0.86, bw: 0.18, bh: 0.07, aw: 0.26, ah: 0.15, j1: 0.25, j2: 0.49, j3: 0.72, j4: 0.71, r:[0.12, 0.24, 0.36, 0.48, 0.60, 0.72, 0.84], botY: 0.95 };
+
+        const NODES = {
+            n1: { x: L.c1, y: L.r[0], label: 'SNSで知る', phase: 'ninchi' },
+            n2: { x: L.c1, y: L.r[1], label: 'ビラ配りで知る', phase: 'ninchi' },
+            n3: { x: L.c1, y: L.r[2], label: '現場で知る', phase: 'ninchi' },
+            n4: { x: L.c1, y: L.r[3], label: '配信で知る', phase: 'ninchi' },
+            n5: { x: L.c1, y: L.r[4], label: 'コンカフェで知る', phase: 'ninchi' },
+            n6: { x: L.c1, y: L.r[5], label: '撮影会で知る', phase: 'ninchi' },
+            n7: { x: L.c1, y: L.r[6], label: '検索で知る', phase: 'ninchi' },
+            k1: { x: L.c2, y: L.r[0], label: 'SNSを見る', phase: 'kento' },
+            k2: { x: L.c2, y: L.r[1], label: 'ビラを見る', phase: 'kento' },
+            k3: { x: L.c2, y: L.r[2], label: 'クチコミ', phase: 'kento' },
+            k4: { x: L.c2, y: L.r[3], label: '配信を見る', phase: 'kento' },
+            k5: { x: L.c2, y: L.r[4], label: '頭の中に浮かぶ', phase: 'kento' },
+            k6: { x: L.c2, y: L.r[5], label: '検索して調べる', phase: 'kento' },
+            k7: { x: L.c2, y: L.r[6], label: 'DM営業うける', phase: 'kento' },
+            s1: { x: L.c3, y: L.r[0], label: '初ライブ参戦', phase: 'shinki' },
+            s2: { x: L.c3, y: L.r[1], label: 'ライブ参戦', phase: 'shinki' },
+            s3: { x: L.c3, y: L.r[2], label: '初特典会参加', phase: 'shinki' },
+            s4: { x: L.c3, y: L.r[4], label: '他の現場いく', phase: 'shinki' },
+            s5: { x: L.c3, y: L.r[5], label: '別の趣味する', phase: 'shinki' },
+            s6: { x: L.c3, y: L.r[6], label: 'ほか', phase: 'shinki' },
+            t_royal: { x: L.c4, y: 0.16, label: 'ロイヤル層', phase: 'teichaku', type: 'area' },
+            t_heavy: { x: L.c4, y: 0.36, label: 'ヘビー層', phase: 'teichaku', type: 'area', subs:['健全','やっかい','ガチ恋'] },
+            t_middle: { x: L.c4, y: 0.56, label: 'ミドル層', phase: 'teichaku', type: 'area', subs:['健全','やっかい','ガチ恋'] },
+            t_light: { x: L.c4, y: 0.76, label: 'ライト層', phase: 'teichaku', type: 'area', subs:['健全','やっかい','ガチ恋'] },
+            out_ridatsu: { x: 0.35, y: L.botY, label: '離脱', type: 'bottom' },
+            out_takai: { x: 0.75, y: L.botY, label: '他界', type: 'bottom' }
+        };
+
+        const SPEECHES = { ninchi:['可愛い子見つけた', '気になる'], kento:['ライブ行きたいな', '迷うな'], shinki:['緊張する', '楽しかった！'], teichaku_light:['来てみたよ！'], teichaku_middle:['着弾！'], teichaku_heavy:['今日の現場！'], teichaku_royal:['推ししか勝たん'] };
+
+        let particles =[];
+        let activeSpeeches = 0;
+        const MAX_SPEECHES = 1;
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width; canvas.height = rect.height;
+            width = canvas.width; height = canvas.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function line(x1, y1, x2, y2) {
+            ctx.beginPath(); ctx.moveTo(x1 * width, y1 * height); ctx.lineTo(x2 * width, y2 * height); ctx.stroke();
+        }
+
+        function renderCanvas() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2;
+
+            line(L.j1, L.r[0], L.j1, L.r[2]); line(L.j1, L.r[3], L.j1, L.r[4]); line(L.j1, L.r[5], L.j1, L.r[6]);
+            for(let i=0; i<7; i++) { line(L.c1 + L.bw/2, L.r[i], L.j1, L.r[i]); line(L.j1, L.r[i], L.c2 - L.bw/2, L.r[i]); }
+            line(L.j2, L.r[0], L.j2, L.r[1]); line(L.j2, L.r[2], L.j2, L.r[3]); line(L.j2, L.r[4], L.j2, L.r[6]);
+            for(let i=0; i<7; i++) { line(L.c2 + L.bw/2, L.r[i], L.j2, L.r[i]); }
+            line(L.j2, L.r[0], L.c3 - L.bw/2, L.r[0]); line(L.j2, L.r[2], L.c3 - L.bw/2, L.r[2]);
+            line(L.j2, L.r[4], L.c3 - L.bw/2, L.r[4]); line(L.j2, L.r[5], L.c3 - L.bw/2, L.r[5]); line(L.j2, L.r[6], L.c3 - L.bw/2, L.r[6]);
+            line(L.c3, L.r[0] + L.bh/2, L.c3, L.r[1] - L.bh/2); line(L.c3, L.r[1] + L.bh/2, L.c3, L.r[2] - L.bh/2);
+            line(L.c3 + L.bw/2, L.r[0], L.j3, L.r[0]); line(L.c3 + L.bw/2, L.r[2], L.j3, L.r[2]);
+            line(L.j3, L.r[0], L.j3, NODES.t_light.y); line(L.j3, NODES.t_light.y, L.c4 - L.aw/2, NODES.t_light.y);
+            line(L.c3, L.r[4] + L.bh/2, L.c3, L.botY - 0.025); line(L.c3, L.r[5] + L.bh/2, L.c3, L.botY - 0.025); line(L.c3, L.r[6] + L.bh/2, L.c3, L.botY - 0.025);
+            line(L.j4, NODES.t_royal.y, L.j4, L.botY - 0.025);
+            line(L.c4 - L.aw/2, NODES.t_royal.y, L.j4, NODES.t_royal.y); line(L.c4 - L.aw/2, NODES.t_heavy.y, L.j4, NODES.t_heavy.y);
+            line(L.c4 - L.aw/2, NODES.t_middle.y, L.j4, NODES.t_middle.y); line(L.c4 - L.aw/2, NODES.t_light.y, L.j4, NODES.t_light.y);
+
+            const boxW = L.bw * width, boxH = L.bh * height, areaW = L.aw * width, areaH = L.ah * height;
+
+            Object.entries(NODES).forEach(([id, n]) => {
+                const nx = n.x * width, ny = n.y * height;
+                if (!n.type) {
+                    ctx.fillStyle = '#475569'; ctx.strokeStyle = '#fde047'; ctx.lineWidth = 1.5;
+                    ctx.fillRect(nx - boxW/2, ny - boxH/2, boxW, boxH); ctx.strokeRect(nx - boxW/2, ny - boxH/2, boxW, boxH);
+                    ctx.fillStyle = '#fff'; ctx.font = '8px "M PLUS Rounded 1c"'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+                    ctx.fillText(n.label, nx, ny - boxH/2 + 4);
+                } else if (n.type === 'area') {
+                    ctx.fillStyle = '#334155'; ctx.fillRect(nx - areaW/2, ny - areaH/2, areaW, areaH);
+                    ctx.fillStyle = '#fff'; ctx.font = 'bold 10px "M PLUS Rounded 1c"'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+                    const layerKey = id.split('_')[1];
+                    ctx.fillText(`${n.label} ${COUNTS[layerKey]}人/月`, nx - areaW/2 + 4, ny - areaH/2 + 4);
+                    if (n.subs) {
+                        const subW = areaW / 3; ctx.strokeStyle = '#94a3b8'; ctx.setLineDash([3, 3]);
+                        for(let i=0; i<3; i++) {
+                            ctx.strokeRect(nx - areaW/2 + i*subW, ny - areaH/2 + 20, subW, areaH - 25);
+                            ctx.fillStyle = '#cbd5e1'; ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
+                            ctx.fillText(n.subs[i], nx - areaW/2 + i*subW + subW/2, ny - areaH/2 + 24);
+                        }
+                        ctx.setLineDash([]);
+                    }
+                } else if (n.type === 'bottom') {
+                    const botW = 0.35 * width, botH = 0.05 * height;
+                    ctx.fillStyle = '#475569'; ctx.strokeStyle = '#fde047';
+                    ctx.fillRect(nx - botW/2, ny - botH/2, botW, botH); ctx.strokeRect(nx - botW/2, ny - botH/2, botW, botH);
+                    ctx.fillStyle = '#fff'; ctx.font = '11px "M PLUS Rounded 1c"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(n.label, nx, ny);
+                }
+            });
+
+            COUNTS.teichaku = 0; COUNTS.royal = 0; COUNTS.heavy = 0; COUNTS.middle = 0; COUNTS.light = 0;
+            activeSpeeches = 0;
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                if (p.phase === 'teichaku') { COUNTS.teichaku++; COUNTS[p.nodeId.split('_')[1]]++; }
+
+                if (p.state === 'stay') {
+                    p.stayTimer--;
+                    if (p.speechTimer > 0) {
+                        p.speechTimer--; activeSpeeches++;
+                        if (p.speechTimer <= 0) p.speech = null;
+                    } else if (Math.random() < 0.001 && activeSpeeches < MAX_SPEECHES) {
+                        let spKey = p.phase === 'teichaku' ? 'teichaku_' + p.nodeId.split('_')[1] : p.phase;
+                        if (SPEECHES[spKey]) { p.speech = SPEECHES[spKey][Math.floor(Math.random() * SPEECHES[spKey].length)]; p.speechTimer = 120; }
+                    }
+                    if (p.phase === 'teichaku' && Math.random() < 0.05) {
+                        p.x = NODES[p.nodeId].x * width + (Math.random() - 0.5) * (areaW - 20);
+                        p.y = NODES[p.nodeId].y * height + (Math.random() * (areaH/2 - 10)) + 10;
+                    }
+                    if (p.stayTimer <= 0) determineNextPath(p);
+                } else if (p.state === 'move') {
+                    const target = p.path[0];
+                    const dx = target.x - p.x, dy = target.y - p.y, dist = Math.hypot(dx, dy), speed = 0.8;
+                    if (dist < speed) {
+                        p.x = target.x; p.y = target.y; p.path.shift();
+                        if (p.path.length === 0) {
+                            p.state = 'stay'; p.stayTimer = 60 + Math.random() * 120; p.phase = NODES[p.nodeId].phase || p.phase;
+                            if (p.phase === 'ninchi') COUNTS.ninchi++; if (p.phase === 'kento') COUNTS.kento++; if (p.phase === 'shinki') COUNTS.shinki++;
+                            if (p.nodeId.startsWith('out_')) { particles.splice(i, 1); continue; }
+                        }
+                    } else { p.x += (dx / dist) * speed; p.y += (dy / dist) * speed; }
+                }
+
+                ctx.fillStyle = '#ec4899'; ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#fff'; ctx.fillRect(p.x - 2.5, p.y - 1.5, 1.5, 1.5); ctx.fillRect(p.x + 1, p.y - 1.5, 1.5, 1.5);
+
+                if (p.speech) {
+                    ctx.fillStyle = '#84cc16'; ctx.font = '9px "M PLUS Rounded 1c"'; const tw = ctx.measureText(p.speech).width;
+                    ctx.beginPath(); ctx.roundRect(p.x + 8, p.y - 20, tw + 8, 16, 4); ctx.fill();
+                    ctx.beginPath(); ctx.moveTo(p.x + 12, p.y - 4); ctx.lineTo(p.x + 16, p.y - 4); ctx.lineTo(p.x + 12, p.y + 2); ctx.fill();
+                    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(p.speech, p.x + 8 + tw/2 + 4, p.y - 12);
+                }
+            }
+
+            if (STATE.isRunning && particles.length < 80 && Math.random() < (STATE.marketingBudget / 500000 + STATE.snsEngagement/200)) {
+                const startId = `n${Math.floor(Math.random() * 7) + 1}`;
+                particles.push({
+                    nodeId: startId, phase: 'ninchi',
+                    x: NODES[startId].x * width + (Math.random()-0.5)*10, y: NODES[startId].y * height + 10 + (Math.random()*10),
+                    state: 'stay', stayTimer: 30, path:[], speech: null, speechTimer: 0
+                });
+            }
+            requestAnimationFrame(renderCanvas);
+        }
+
+        function determineNextPath(p) {
+            const r = Math.random(); let nextId = null; let waypoints =[]; const offset = 10;
+            if (p.phase === 'ninchi') {
+                const nIdx = parseInt(p.nodeId.replace('n', ''));
+                let possibleK = nIdx <= 3 ? [1, 2, 3] : (nIdx <= 5 ?[4, 5] : [6, 7]);
+                nextId = `k${possibleK[Math.floor(Math.random() * possibleK.length)]}`;
+                waypoints =[{ x: L.j1 * width, y: NODES[p.nodeId].y * height + offset }, { x: L.j1 * width, y: NODES[nextId].y * height + offset }, { x: NODES[nextId].x * width, y: NODES[nextId].y * height + offset }];
+            } else if (p.phase === 'kento') {
+                const kIdx = parseInt(p.nodeId.replace('k', ''));
+                nextId = kIdx <= 2 ? 's1' : (kIdx <= 4 ? 's3' : (kIdx === 5 ? 's4' : (kIdx === 6 ? 's5' : 's6')));
+                waypoints =[{ x: L.j2 * width, y: NODES[p.nodeId].y * height + offset }, { x: L.j2 * width, y: NODES[nextId].y * height + offset }, { x: NODES[nextId].x * width, y: NODES[nextId].y * height + offset }];
+            } else if (p.phase === 'shinki') {
+                if (p.nodeId === 's1') nextId = r < 0.8 ? 's2' : 't_light';
+                else if (p.nodeId === 's2') nextId = 's3';
+                else if (p.nodeId === 's3') nextId = 't_light';
+                else nextId = 'out_ridatsu';
+
+                if (nextId === 's2' || nextId === 's3') waypoints = [{ x: NODES[nextId].x * width, y: NODES[nextId].y * height + offset }];
+                else if (nextId === 'out_ridatsu') waypoints = [{ x: NODES[p.nodeId].x * width, y: NODES.out_ridatsu.y * height }];
+                else if (nextId === 't_light') waypoints =[{ x: L.j3 * width, y: NODES[p.nodeId].y * height + offset }, { x: L.j3 * width, y: NODES.t_light.y * height + offset }, { x: (NODES.t_light.x - L.aw/2) * width + 20, y: NODES.t_light.y * height + offset }];
+            } else if (p.phase === 'teichaku') {
+                if (p.nodeId === 't_light') nextId = r < 0.1 ? 't_middle' : (r < 0.2 ? 'out_takai' : null);
+                else if (p.nodeId === 't_middle') nextId = r < 0.05 ? 't_heavy' : (r < 0.1 ? 't_light' : (r < 0.15 ? 'out_takai' : null));
+                else if (p.nodeId === 't_heavy') nextId = r < 0.02 ? 't_royal' : (r < 0.1 ? 't_middle' : null);
+                else if (p.nodeId === 't_royal') nextId = r < 0.05 ? 't_heavy' : null;
+
+                if (nextId === 'out_takai') waypoints = [{ x: (NODES[p.nodeId].x - L.aw/2) * width, y: NODES[p.nodeId].y * height + offset }, { x: L.j4 * width, y: NODES[p.nodeId].y * height + offset }, { x: L.j4 * width, y: NODES.out_takai.y * height }, { x: NODES.out_takai.x * width, y: NODES.out_takai.y * height }];
+                else if (nextId) waypoints = [{ x: NODES[nextId].x * width, y: NODES[nextId].y * height + offset }];
+                else { p.stayTimer = 100; return; }
+            }
+            if (nextId) { p.nodeId = nextId; p.path = waypoints; p.state = 'move'; }
+        }['cheki', 'budget', 'greeting', 'sns'].forEach(id => {
+            $(`lever-${id}`).addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                STATE[id === 'cheki' ? 'chekiPrice' : id === 'budget' ? 'marketingBudget' : id === 'greeting' ? 'greetingQuality' : 'snsEngagement'] = val;
+                $(`val-${id}`).innerText = (id === 'greeting' || id === 'sns') ? val : formatCurrency(val);
+            });
+        });
+
+        $('btn-start').addEventListener('click', () => {
+            $('modal').classList.add('hidden');
+            STATE.isRunning = true; STATE.timeLeft = 120;
+            COUNTS.ninchi = 0; COUNTS.kento = 0; COUNTS.shinki = 0;
+        });
+
+        setInterval(() => {
+            if (STATE.isRunning) {
+                STATE.timeLeft--;
+                $('ui-time').innerText = `${Math.floor(STATE.timeLeft / 60).toString().padStart(2, '0')}:${(STATE.timeLeft % 60).toString().padStart(2, '0')}`;
+                updateKPI();
+                if (STATE.timeLeft <= 0) {
+                    STATE.isRunning = false; STATE.month++;
+                    $('ui-month').innerText = STATE.month; $('modal-month').innerText = STATE.month;
+                    $('modal').classList.remove('hidden');
+                }
+            }
+        }, 1000);
+
+        setTimeout(() => { resizeCanvas(); updateKPI(); renderCanvas(); }, 100);
+    </script>
+</body>
+</html>
